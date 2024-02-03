@@ -91,9 +91,32 @@ def shortest_path(source, target):
 
     If no possible path, returns None.
     """
+    if source == target: return []
 
-    # TODO
-    raise NotImplementedError
+    frontier = QueueFrontier()
+    frontier.add((source, None, None)) # (curr_people_id, father_state, movie_id)
+
+    path_visited = set() # (curr_people_id, prev_people_id, movie_id)
+
+    while not frontier.empty():
+        state = frontier.remove()
+        nbrs = neighbors_for_person(state[0]) # (movie_id, people_id)
+        for nbr in nbrs:
+            if nbr[1] == state[0]: continue
+
+            if nbr[1] == target:
+                ret = [nbr]
+                while state[1] is not None:
+                    ret = [(state[2], state[0])] + ret
+                    state = state[1]
+                return ret
+            
+            if (nbr[1], state[0], nbr[0]) in path_visited: continue
+            path_visited.add((nbr[1], state[0], nbr[0]))
+            
+            frontier.add((nbr[1], state, nbr[0]))
+
+    return None
 
 
 def person_id_for_name(name):
