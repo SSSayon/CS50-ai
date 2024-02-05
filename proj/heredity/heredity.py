@@ -139,7 +139,58 @@ def joint_probability(people, one_gene, two_genes, have_trait):
         * everyone in set `have_trait` has the trait, and
         * everyone not in set` have_trait` does not have the trait.
     """
-    raise NotImplementedError
+    def get_gene_num(person):
+        if person in one_gene:
+            return 1
+        elif person in two_genes:
+            return 2
+        else:
+            return 0
+
+    def pass_one_gene(person) -> float:
+        gene_num = get_gene_num(person)
+        if gene_num == 0:
+            return PROBS["mutation"]
+        elif gene_num == 1:
+            return 0.5
+        else:
+            return 1 - PROBS["mutation"]
+
+    def pass_no_gene(person) -> float:
+        return 1 - pass_one_gene(person)
+
+    def calc_gene_pr(person, gene_num):
+        mother = people[person]["mother"]
+        father = people[person]["father"]
+
+        if gene_num == 0:
+            return pass_no_gene(mother) * pass_no_gene(father)
+        elif gene_num == 1:
+            return (pass_no_gene(mother) * pass_one_gene(father) + 
+                    pass_one_gene(mother) * pass_no_gene(father)) 
+        else:
+            return pass_one_gene(mother) * pass_one_gene(father)
+
+    def probability(person):
+        gene_num = get_gene_num(person)
+
+        if people[person]["mother"] is not None:
+            gene_pr = calc_gene_pr(person, gene_num)
+        else:
+            gene_pr = PROBS["gene"][gene_num]
+        
+        if person in have_trait:
+            trait_pr = PROBS["trait"][gene_num][True]
+        else:
+            trait_pr = PROBS["trait"][gene_num][False] 
+
+        return gene_pr * trait_pr
+            
+    joint_pr = 1
+    for person in people:
+        joint_pr *= probability(person)
+
+    return joint_pr
 
 
 def update(probabilities, one_gene, two_genes, have_trait, p):
@@ -149,7 +200,22 @@ def update(probabilities, one_gene, two_genes, have_trait, p):
     Which value for each distribution is updated depends on whether
     the person is in `have_gene` and `have_trait`, respectively.
     """
-    raise NotImplementedError
+    def update_trait(people):
+        if people in have_trait:
+            probabilities[people]["trait"][True] += p
+        else:
+            probabilities[people]["trait"][False] += p
+
+    for people in probabilities:
+        if people in one_gene:
+            probabilities[people]["gene"][1] += p
+            update_trait(people)
+        elif people in two_genes:
+            probabilities[people]["gene"][2] += p
+            update_trait(people)
+        else:
+            probabilities[people]["gene"][0] += p
+            update_trait(people)
 
 
 def normalize(probabilities):
@@ -157,7 +223,15 @@ def normalize(probabilities):
     Update `probabilities` such that each probability distribution
     is normalized (i.e., sums to 1, with relative proportions the same).
     """
-    raise NotImplementedError
+    for person in probabilities:
+
+        sum_gene = sum(probabilities[person]["gene"][i] for i in range(3))
+        for i in range(3):
+            probabilities[person]["gene"][i] /= sum_gene
+
+        sum_trait = probabilities[person]["trait"][True] + probabilities[person]["trait"][False]
+        probabilities[person]["trait"][True] /= sum_trait
+        probabilities[person]["trait"][False] /= sum_trait
 
 
 if __name__ == "__main__":
